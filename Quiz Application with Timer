@@ -1,0 +1,95 @@
+import java.util.*;
+import java.util.concurrent.*;
+
+class QuizQuestion {
+    String question;
+    List<String> options;
+    int correctAnswerIndex;
+
+    QuizQuestion(String question, List<String> options, int correctAnswerIndex) {
+        this.question = question;
+        this.options = options;
+        this.correctAnswerIndex = correctAnswerIndex;
+    }
+}
+
+public class QuizGame {
+    private static final int TIMER_DURATION = 10; 
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        List<QuizQuestion> quizQuestions = loadQuestions();
+        int score = 0;
+
+        for (QuizQuestion q : quizQuestions) {
+            System.out.println(q.question);
+            displayOptions(q.options);
+            boolean answered = askQuestion(q, scanner);
+            if (answered) {
+                score++;
+            }
+        }
+
+        displayResults(score, quizQuestions.size());
+        scanner.close();
+    }
+
+    private static List<QuizQuestion> loadQuestions() {
+        List<QuizQuestion> questions = new ArrayList<>();
+        questions.add(new QuizQuestion("What is the capital of France?", 
+            Arrays.asList("1. Berlin", "2. Madrid", "3. Paris", "4. Rome"), 2));
+        questions.add(new QuizQuestion("Which planet is known as the Red Planet?", 
+            Arrays.asList("1. Earth", "2. Mars", "3. Jupiter", "4. Venus"), 1));
+        questions.add(new QuizQuestion("What is the largest mammal in the world?", 
+            Arrays.asList("1. Elephant", "2. Blue Whale", "3. Giraffe", "4. Shark"), 1));
+        return questions;
+    }
+
+    private static void displayOptions(List<String> options) {
+        for (String option : options) {
+            System.out.println(option);
+        }
+    }
+
+    private static boolean askQuestion(QuizQuestion question, Scanner scanner) {
+        System.out.println("You have " + TIMER_DURATION + " seconds to answer...");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<Integer> future = executor.submit(() -> {
+            int answer = -1;
+            try {
+                answer = scanner.nextInt() - 1; 
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+            return answer;
+        });
+
+        try {
+            Integer answer = future.get(TIMER_DURATION, TimeUnit.SECONDS);
+            if (answer != null && answer == question.correctAnswerIndex) {
+                System.out.println("Correct!");
+                return true;
+            } else {
+                System.out.println("Incorrect! The correct answer was: " + 
+                                   (question.correctAnswerIndex + 1) + ". " + question.options.get(question.correctAnswerIndex));
+                return false;
+            }
+        } catch (TimeoutException e) {
+            System.out.println("Time's up! The correct answer was: " + 
+                               (question.correctAnswerIndex + 1) + ". " + question.options.get(question.correctAnswerIndex));
+            return false;
+        } catch (Exception e) {
+            System.out.println("An error occurred.");
+            return false;
+        } finally {
+            future.cancel(true);
+            executor.shutdownNow();
+        }
+    }
+
+    private static void displayResults(int score, int total) {
+        System.out.println("\nQuiz Over!");
+        System.out.println("Your score: " + score + "/" + total);
+        System.out.println(score == total ? "Perfect score!" : "Better luck next time!");
+    }
+}
